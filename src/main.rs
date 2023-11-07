@@ -1,8 +1,8 @@
 use std::env::args;
 use std::fmt::format;
-use std::process::{Command, CommandArgs, Stdio};
 use std::io;
 use std::path::Prefix::DeviceNS;
+use std::process::{Command, CommandArgs, Stdio};
 
 struct SystemConfig {
     kernel: String,
@@ -15,23 +15,19 @@ struct SystemConfig {
     locale: String,
 }
 
-
-
 fn input() -> String {
-    let mut answer= String::new();
-    io::stdin()
-        .read_line(&mut answer)
-        .expect("Failed");
+    let mut answer = String::new();
+    io::stdin().read_line(&mut answer).expect("Failed");
     if answer.len() == 0 {
         panic!("Shutdown");
     } else {
-    return answer;
-        }
+        return answer;
+    }
 }
 
 fn passwd() -> String {
     let mut pass1 = String::new();
-    let mut pass2= String::new();
+    let mut pass2 = String::new();
     loop {
         pass1 = input();
         pass2 = input();
@@ -49,7 +45,16 @@ fn passwd() -> String {
 
 fn main() {
     let locales = ["English", "Russian", "German", "French", "Spanish"];
-    let DE = ["GNOME", "KDE Plasma", "Xfce", "Cinnamon", "Mate", "i3", "dwm", "sway"];
+    let DE = [
+        "GNOME",
+        "KDE Plasma",
+        "Xfce",
+        "Cinnamon",
+        "Mate",
+        "i3",
+        "dwm",
+        "sway",
+    ];
     let mut system_config = SystemConfig {
         kernel: String::new(),
         password_root: String::new(),
@@ -82,19 +87,19 @@ fn main() {
             "1" => {
                 system_config.kernel = String::from("linux");
                 break;
-            },
+            }
             "2" => {
                 system_config.kernel = String::from("linux-lts");
                 break;
-            },
+            }
             "3" => {
                 system_config.kernel = String::from("linux-zen");
                 break;
-            },
+            }
             "4" => {
                 system_config.kernel = String::from("linux-hardened");
                 break;
-            },
+            }
             _ => {
                 answer.clear();
                 continue;
@@ -104,30 +109,30 @@ fn main() {
     println!("Choose  a language:");
     for i in 1..6 {
         println!("{}. {} language", i, locales[i - 1]);
-    };
+    }
     loop {
         answer = input();
         match answer.trim_end() {
             "1" => {
                 system_config.locale = String::from("en_US.UTF-8");
                 break;
-            },
+            }
             "2" => {
                 system_config.locale = String::from("ru_RU.UTF-8");
                 break;
-            },
+            }
             "3" => {
                 system_config.locale = String::from("de_DE.UTF-8");
                 break;
-            },
+            }
             "4" => {
                 system_config.locale = String::from("fr_FR.UTF-8");
                 break;
-            },
+            }
             "5" => {
                 system_config.locale = String::from("fr_FR.UTF-8");
                 break;
-            },
+            }
             _ => {
                 answer.clear();
                 continue;
@@ -140,7 +145,10 @@ fn main() {
     system_config.username = input();
     println!("Enter username password:");
     system_config.password = passwd();
-    println!("Add user {} to the \"wheel\" group?", system_config.username);
+    println!(
+        "Add user {} to the \"wheel\" group?",
+        system_config.username
+    );
     println!("Enter [Y/N] to add");
     loop {
         answer = input();
@@ -148,7 +156,7 @@ fn main() {
             "Y" | "y" => {
                 system_config.user_admin = true;
                 break;
-            },
+            }
             "N" | "n" => {
                 system_config.user_admin = false;
                 break;
@@ -162,41 +170,41 @@ fn main() {
     println!("Choose Desktop environment:");
     for i in 1..9 {
         println!("{}. {}", i, DE[i - 1]);
-    };
+    }
     loop {
         answer = input();
         match answer.trim_end() {
             "1" => {
                 system_config.choose_de = String::from("gnome");
                 break;
-            },
+            }
             "2" => {
                 system_config.choose_de = String::from("plasma");
                 break;
-            },
+            }
             "3" => {
                 system_config.choose_de = String::from("xfce4");
                 break;
-            },
+            }
             "4" => {
                 system_config.choose_de = String::from("cinnamon");
                 break;
-            },
+            }
             "5" => {
                 system_config.choose_de = String::from("mate");
                 break;
-            },
+            }
             "6" => {
                 system_config.choose_de = String::from("i3");
                 break;
-            },
+            }
             "7" => {
                 system_config.choose_de = String::from("dwm");
                 break;
-            },
+            }
             "8" => {
                 system_config.choose_de = String::from("sway");
-            },
+            }
             _ => {
                 answer.clear();
                 continue;
@@ -214,7 +222,7 @@ fn mount(directory: &String, flag: &String) {
             .spawn();
         match mount_check {
             Ok(..) => ..,
-            Err(..) => panic!("Failed mount {} with flag {}", directory, flag)
+            Err(..) => panic!("Failed mount {} with flag {}", directory, flag),
         };
     } else {
         let mount_check = Command::new("mount")
@@ -224,7 +232,7 @@ fn mount(directory: &String, flag: &String) {
             .spawn();
         match mount_check {
             Ok(..) => ..,
-            Err(..) => panic!("Failed mount {} with flag {}", directory, flag)
+            Err(..) => panic!("Failed mount {} with flag {}", directory, flag),
         };
     }
 }
@@ -236,38 +244,34 @@ fn install(sc: SystemConfig) {
     let flag1 = String::from("--rbind");
     let flag2 = String::from("--make-rslave");
     let flag3 = String::from("--types");
-    let pacstrap = Command::new("pacstrap -K /mnt")
-        .arg("base base-devel linux-firmware")
+    let pacstrap = Command::new("pacstrap")
+        .args(["-K", "/mnt", "base", "base-devel", "linux-firmware"])
         .arg(sc.kernel.trim_end())
         .spawn();
     match pacstrap {
         Ok(..) => ..,
-        Err(..) => panic!("Failed start pacstrap")
+        Err(..) => panic!("Failed start pacstrap"),
     };
-    let genfstab = Command::new("genfstab /mnt >> /mnt/etc/fstab")
-        .spawn();
+    let genfstab = Command::new("genfstab /mnt >> /mnt/etc/fstab").spawn();
     match genfstab {
         Ok(..) => ..,
-        Err(..) => panic!("Failed start genfstab")
+        Err(..) => panic!("Failed start genfstab"),
     };
     mount(&sys, &flag1);
     mount(&sys, &flag2);
     mount(&dev, &flag1);
     mount(&dev, &flag2);
     mount(&proc, &flag3);
-    let hwclock = Command::new("hwclock --systohc")
-        .spawn();
+    let hwclock = Command::new("hwclock --systohc").spawn();
     match hwclock {
         Ok(..) => ..,
-        Err(..) => panic!("Error set hardware clock")
+        Err(..) => panic!("Error set hardware clock"),
     };
-    let set_clock = Command::new("ln -sf /usr/share/zoneinfo/Europe/Moscow /etc/localtime")
-        .spawn();
+    let set_clock = Command::new("ln -sf /usr/share/zoneinfo/Europe/Moscow /etc/localtime").spawn();
     match set_clock {
         Ok(..) => ..,
-        Err(..) => panic!("Error set clock")
+        Err(..) => panic!("Error set clock"),
     };
-
 }
 //# mount --rbind /sys/firmware/efi/efivars sys/firmware/efi/efivars/
 
@@ -279,9 +283,8 @@ fn locale(locale_config: String) {
             .spawn();
         match locale {
             Ok(..) => ..,
-            Err(..) => panic!("Error adding locale")
+            Err(..) => panic!("Error adding locale"),
         };
-
     } else {
         let locale = Command::new("echo")
             .arg(locale_config.trim_end())
@@ -290,8 +293,7 @@ fn locale(locale_config: String) {
             .spawn();
         match locale {
             Ok(..) => ..,
-            Err(..) => panic!("Error adding locale")
+            Err(..) => panic!("Error adding locale"),
         };
-
     }
 }
