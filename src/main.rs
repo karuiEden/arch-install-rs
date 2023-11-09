@@ -252,11 +252,13 @@ fn install(sc: SystemConfig) {
     if !pacstrap.success() {
         exit(0);
     }
-    let genfstab = Command::new("genfstab /mnt >> /mnt/etc/fstab").spawn();
-    match genfstab {
-        Ok(..) => ..,
-        Err(..) => panic!("Failed start genfstab"),
-    };
+    let genfstab = Command::new("genfstab /mnt >> /mnt/etc/fstab").
+        .args(["/mnt", ">>", "/mnt/etc/fstab"])
+        .status()
+        .unwrap();
+    if !genfstab.success() {
+        exit(0);
+    }
     mount(&sys, &flag1);
     mount(&sys, &flag2);
     mount(&dev, &flag1);
