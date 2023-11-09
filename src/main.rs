@@ -253,7 +253,7 @@ fn install(sc: SystemConfig) {
         exit(0);
     }
     let genfstab = Command::new("genfstab")
-        .args(["/mnt", ">>", "/mnt/etc/fstab"])
+        .args(["/mnt".trim_end(), ">>".trim_end(), "/mnt/etc/fstab".trim_end()])
         .status()
         .unwrap();
     if !genfstab.success() {
