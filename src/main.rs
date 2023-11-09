@@ -2,7 +2,7 @@ use std::env::args;
 use std::fmt::format;
 use std::io;
 use std::path::Prefix::DeviceNS;
-use std::process::{Command, CommandArgs, Stdio};
+use std::process::{Command, CommandArgs, exit, Stdio};
 
 struct SystemConfig {
     kernel: String,
@@ -247,11 +247,11 @@ fn install(sc: SystemConfig) {
     let pacstrap = Command::new("pacstrap")
         .args(["-K", "/mnt", "base", "base-devel", "linux-firmware"])
         .arg(sc.kernel.trim_end())
-        .spawn();
-    match pacstrap {
-        Ok(..) => ..,
-        Err(..) => panic!("Failed start pacstrap"),
-    };
+        .status()
+        .unwrap();
+    if !pacstrap.success() {
+        exit(0);
+    }
     let genfstab = Command::new("genfstab /mnt >> /mnt/etc/fstab").spawn();
     match genfstab {
         Ok(..) => ..,
