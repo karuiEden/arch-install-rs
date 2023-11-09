@@ -252,8 +252,8 @@ fn install(sc: SystemConfig) {
     if !pacstrap.success() {
         exit(0);
     }
-    let genfstab = Command::new("genfstab")
-        .args(["/mnt".trim_end(), ">>".trim_end(), "/mnt/etc/fstab".trim_end()])
+    let genfstab = Command::new("/bin/bash")
+        .args(["c", "genfstab -U /mnt >> /mnt/etc/fstab"])
         .status()
         .unwrap();
     if !genfstab.success() {
