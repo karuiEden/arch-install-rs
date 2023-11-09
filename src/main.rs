@@ -252,14 +252,14 @@ fn install(sc: SystemConfig) {
     if !pacstrap.success() {
         exit(0);
     }
-    let genfstab = Command::new("genfstab /mnt >> /mnt/etc/fstab").
+    let genfstab = Command::new("genfstab")
         .args(["/mnt", ">>", "/mnt/etc/fstab"])
         .status()
         .unwrap();
     if !genfstab.success() {
         exit(0);
     }
-    mount(&sys, &flag1);
+    /*mount(&sys, &flag1);
     mount(&sys, &flag2);
     mount(&dev, &flag1);
     mount(&dev, &flag2);
@@ -274,6 +274,8 @@ fn install(sc: SystemConfig) {
         Ok(..) => ..,
         Err(..) => panic!("Error set clock"),
     };
+
+     */
 }
 //# mount --rbind /sys/firmware/efi/efivars sys/firmware/efi/efivars/
 
