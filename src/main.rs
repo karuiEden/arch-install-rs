@@ -1,9 +1,7 @@
-use std::env::args;
-use std::fmt::format;
 use std::io;
-use std::path::Prefix::DeviceNS;
-use std::process::{Command, CommandArgs, exit, Stdio};
-
+use std::fs::File;
+use std::io::{ErrorKind, Write};
+use std::process::{Command, exit};
 struct SystemConfig {
     kernel: String,
     password_root: String,
@@ -45,7 +43,7 @@ fn passwd() -> String {
 
 fn main() {
     let locales = ["English", "Russian", "German", "French", "Spanish"];
-    let DE = [
+    let de = [
         "GNOME",
         "KDE Plasma",
         "Xfce",
@@ -169,7 +167,7 @@ fn main() {
     }
     println!("Choose Desktop environment:");
     for i in 1..9 {
-        println!("{}. {}", i, DE[i - 1]);
+        println!("{}. {}", i, de[i - 1]);
     }
     loop {
         answer = input();
@@ -214,36 +212,7 @@ fn main() {
     install(system_config);
 }
 
-fn mount(directory: &String, flag: &String) {
-    if flag == "--make-rslave" {
-        let mount_check = Command::new("mount")
-            .arg(flag.trim_end())
-            .arg(format!("/mnt/{}", directory).trim_end())
-            .spawn();
-        match mount_check {
-            Ok(..) => ..,
-            Err(..) => panic!("Failed mount {} with flag {}", directory, flag),
-        };
-    } else {
-        let mount_check = Command::new("mount")
-            .arg(flag.trim_end())
-            .arg(format!("/{}", directory).trim_end())
-            .arg(format!("/mnt/{}", directory).trim_end())
-            .spawn();
-        match mount_check {
-            Ok(..) => ..,
-            Err(..) => panic!("Failed mount {} with flag {}", directory, flag),
-        };
-    }
-}
-
 fn install(sc: SystemConfig) {
-    let sys = String::from("sys");
-    let proc = String::from("proc");
-    let dev = String::from("dev");
-    let flag1 = String::from("--rbind");
-    let flag2 = String::from("--make-rslave");
-    let flag3 = String::from("--types");
     let pacstrap = Command::new("pacstrap")
         .args(["-K", "/mnt", "base", "base-devel", "linux-firmware"])
         .arg(sc.kernel.trim_end())
@@ -253,51 +222,109 @@ fn install(sc: SystemConfig) {
         exit(0);
     }
     let genfstab = Command::new("/bin/bash")
-        .args(["c", "genfstab -U /mnt >> /mnt/etc/fstab"])
+        .args(["-c", "genfstab -U /mnt >> /mnt/etc/fstab"])
         .status()
         .unwrap();
     if !genfstab.success() {
         exit(0);
     }
-    /*mount(&sys, &flag1);
-    mount(&sys, &flag2);
-    mount(&dev, &flag1);
-    mount(&dev, &flag2);
-    mount(&proc, &flag3);
-    let hwclock = Command::new("hwclock --systohc").spawn();
-    match hwclock {
-        Ok(..) => ..,
-        Err(..) => panic!("Error set hardware clock"),
-    };
-    let set_clock = Command::new("ln -sf /usr/share/zoneinfo/Europe/Moscow /etc/localtime").spawn();
-    match set_clock {
-        Ok(..) => ..,
-        Err(..) => panic!("Error set clock"),
-    };
+    let hwclock = Command::new("arch-chroot /mnt")
+        .arg("hwclock --systohc")
+        .status()
+        .unwrap();
+    if !hwclock.success() {
+        exit(0);
+    }
+    let set_clock = Command::new("arch-chroot /mnt")
+        .arg("ln -sf /usr/share/zoneinfo/Europe/Moscow /etc/localtime")
+        .status()
+        .unwrap();
+    if !set_clock.success() {
+        exit(0);
+    }
+    hostname(&sc.hostname);
+    locale(sc.locale);
+    hosts(&sc.hostname)
 
-     */
+
 }
-//# mount --rbind /sys/firmware/efi/efivars sys/firmware/efi/efivars/
+fn hostname(host_name: &String) {
+    let mut host = File::open("/mnt/etc/hostname").unwrap_or_else(|error|{
+        if error.kind() == ErrorKind::NotFound {
+            File::create("/mnt/etc/hostname").unwrap_or_else(|error|{
+                panic!("Error create file {:?}", error);
+            })
+        } else {
+            panic!("Error open file {:?}", error);
+        }
+    });
+    host.write_all(host_name.as_ref()).unwrap();
+}
+
 
 fn locale(locale_config: String) {
     if locale_config == "en_US.UTF-8" {
-        let locale = Command::new("echo")
-            .arg(locale_config.trim_end())
-            .arg("UTF-8 > /etc/locale.gen")
-            .spawn();
-        match locale {
-            Ok(..) => ..,
-            Err(..) => panic!("Error adding locale"),
-        };
-    } else {
-        let locale = Command::new("echo")
-            .arg(locale_config.trim_end())
-            .arg("UT")
-            .arg("> /etc/locale.gen")
-            .spawn();
-        match locale {
-            Ok(..) => ..,
-            Err(..) => panic!("Error adding locale"),
-        };
+        let mut locale_gen = File::open("/mnt/etc/locale.gen").unwrap_or_else(|error|{
+            if error.kind() == ErrorKind::NotFound {
+                File::create("/mnt/etc/locale.gen").unwrap_or_else(|error|{
+                    panic!("Error create file {:?}", error);
+                })
+            } else {
+                panic!("Error open file {:?}", error);
+            }
+        });
+        locale_gen.write_all(format!("{} UTF-8", locale_config).as_ref()).unwrap();
+        let locale_gen = Command::new("arch-chroot /mnt locale-gen").status().unwrap();
+        if !locale_gen.success() {
+            exit(0);
+        }
+        let mut locale_conf = File::open("/mnt/etc/locale.conf").unwrap_or_else(|error|{
+            if error.kind() == ErrorKind::NotFound {
+                File::create("/mnt/etc/locale.conf").unwrap_or_else(|error|{
+                    panic!("Error create file {:?}", error);
+                })
+            } else {
+                panic!("Error open file {:?}", error);
+            }
+        });
+        locale_conf.write_all(format!("LANG={}\nLC_TIME={}\nLC_COLLATE=C", locale_config, locale_config).as_ref()).unwrap();
+        } else {
+        let mut locale_gen = File::open("/mnt/etc/locale.gen").unwrap_or_else(|error|{
+            if error.kind() == ErrorKind::NotFound {
+                File::create("/mnt/etc/locale.gen").unwrap_or_else(|error|{
+                    panic!("Error create file {:?}", error);
+                })
+            } else {
+                panic!("Error open file {:?}", error);
+            }
+        });
+        locale_gen.write_all(format!("en_US.UTF-8 UTF-8\n{} UTF-8", locale_config).as_ref()).unwrap();
+        let locale_gen = Command::new("arch-chroot /mnt locale-gen").status().unwrap();
+        if !locale_gen.success() {
+            exit(0);
+        }
+        let mut locale_conf = File::open("/mnt/etc/locale.conf").unwrap_or_else(|error|{
+            if error.kind() == ErrorKind::NotFound {
+                File::create("/mnt/etc/locale.conf").unwrap_or_else(|error|{
+                    panic!("Error create file {:?}", error);
+                })
+            } else {
+                panic!("Error open file {:?}", error);
+            }
+        });
+        locale_conf.write_all(format!("LANG={}\nLC_TIME={}\nLC_COLLATE=C", locale_config, locale_config).as_ref()).unwrap();
     }
+}
+
+fn hosts(hostname: &String) {
+    let mut host = File::open("/mnt/etc/hosts").unwrap_or_else(|error|{
+        if error.kind() == ErrorKind::NotFound {
+            File::create("/mnt/etc/hosts").unwrap_or_else(|error|{
+                panic!("Error create file {:?}", error);
+            })
+        } else {
+            panic!("Error open file {:?}", error);
+        }
+    });
+    host.write_all(format!("127.0.0.1        localhost\n::1              localhost\n127.0.1.1        {}", hostname).as_ref()).unwrap();
 }
