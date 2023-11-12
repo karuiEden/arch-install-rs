@@ -269,7 +269,7 @@ fn install(sc: SystemConfig) {
     let hwclock = Command::new("arch-chroot /mnt")
         .arg("hwclock --systohc")
         .status()
-        .unwrap();
+        .expect("Fail sync hard clock");
     if !hwclock.success() {
         exit(0);
     }
