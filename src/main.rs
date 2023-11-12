@@ -259,21 +259,20 @@ fn install(sc: SystemConfig) {
         exit(0);
     }
 
-    let pacman = Command::new("pacman")
-        .args(["-Sy", sc.choose_de.trim_end(), "networkmanager", "xorg",
-            "pipewire", "firefox", "unzip", "unrar", "grub", "intel-microcode", "amd-microcode", "xdg-utils", "xdg-user-dirs",
-            "--noconfirm"])
-        .status()
-        .unwrap();
-    if !pacman.success() {
-        exit(0);
-    }
-
     let genfstab = Command::new("/bin/bash")
         .args(["-c", "genfstab -U /mnt >> /mnt/etc/fstab"])
         .status()
         .unwrap();
     if !genfstab.success() {
+        exit(0);
+    }
+    let pacman = Command::new("arch-chroot /mnt pacman")
+        .args(["-Sy", sc.choose_de.trim_end(), "networkmanager", "xorg",
+            "pipewire", "firefox", "unzip", "unrar", "grub", "intel-ucode", "amd-ucode", "xdg-utils", "xdg-user-dirs",
+            "--noconfirm"])
+        .status()
+        .unwrap();
+    if !pacman.success() {
         exit(0);
     }
     let hwclock = Command::new("arch-chroot /mnt")
