@@ -251,7 +251,8 @@ fn main() {
 
 fn install(sc: SystemConfig) {
     let pacstrap = Command::new("pacstrap")
-        .args(["-K", "/mnt", "base", "base-devel", "linux-firmware"])
+        .args(["-K", "/mnt", "base", "base-devel", "linux-firmware", sc.choose_de.as_str(), "networkmanager", "xorg",
+            "pipewire", "firefox", "unzip", "unrar", "grub", "intel-ucode", "amd-ucode", "xdg-utils", "xdg-user-dirs"])
         .arg(sc.kernel.trim_end())
         .status()
         .unwrap();
@@ -266,15 +267,17 @@ fn install(sc: SystemConfig) {
     if !genfstab.success() {
         exit(0);
     }
-    let hwclock = Command::new("arch-chroot /mnt")
-        .arg("hwclock --systohc")
+    let hwclock = Command::new("arch-chroot")
+        .arg("/mnt")
+        .args(["hwclock", "--systohc"])
         .status()
         .expect("Fail sync hard clock");
     if !hwclock.success() {
         exit(0);
     }
-    let set_clock = Command::new("arch-chroot /mnt")
-        .arg("ln -sf /usr/share/zoneinfo/Europe/Moscow /etc/localtime")
+    let set_clock = Command::new("arch-chroot")
+        .arg("/mnt")
+        .args(["ln", "-sf", "/usr/share/zoneinfo/Europe/Moscow" ,"/etc/localtime"])
         .status()
         .unwrap();
     if !set_clock.success() {
@@ -285,15 +288,6 @@ fn install(sc: SystemConfig) {
     hosts(&sc.hostname);
     passwd_root(sc.password_root);
     create_user(sc.user);
-    let pacman = Command::new("arch-chroot /mnt pacman")
-        .args(["-Sy", sc.choose_de.trim_end(), "networkmanager", "xorg",
-            "pipewire", "firefox", "unzip", "unrar", "grub", "intel-ucode", "amd-ucode", "xdg-utils", "xdg-user-dirs",
-            "--noconfirm"])
-        .status()
-        .unwrap();
-    if !pacman.success() {
-        exit(0);
-    }
     let nm = String::from("NetworkManager");
     systemd(nm);
     systemd(sc.login_manager);
@@ -302,13 +296,17 @@ fn install(sc: SystemConfig) {
 }
 
 fn boot_loader() {
-    let install = Command::new("arch-chroot /mnt grub-install")
+    let install = Command::new("arch-chroot")
+        .arg("/mnt")
+        .arg("grub-install")
         .status()
         .unwrap();
     if !install.success() {
         exit(0);
     }
-    let config = Command::new("arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg")
+    let config = Command::new("arch-chroot")
+        .arg("/mnt")
+        .args(["grub-mkconfig", "-o", "/boot/grub/grub.cfg"])
         .status()
         .unwrap();
     if !config.success() {
@@ -325,8 +323,9 @@ fn create_user(user: UserConfig) {
     if user.user_admin == true {
         groups.push_str("-G wheel");
     }
-    let create = Command::new("useradd")
-        .args(["-m", groups.trim_end(), "-s", format!("/bin/{}", user.shell).as_str().trim_end(), "-p", user.password.trim_end(), user.username.trim_end()])
+    let create = Command::new("arch-chroot")
+        .arg("/mnt")
+        .args(["useradd", "-m", groups.trim_end(), "-s", format!("/bin/{}", user.shell).as_str().trim_end(), "-p", user.password.trim_end(), user.username.trim_end()])
         .status()
         .unwrap();
     if !create.success() {
@@ -334,13 +333,16 @@ fn create_user(user: UserConfig) {
     }
 }
 fn passwd_root(pass: String) {
-    let mut echo = Command::new("arch-chroot /mnt echo")
-        .arg(format!("root:{}", pass))
+    let mut echo = Command::new("arch-chroot")
+        .arg("/mnt")
+        .args(["echo", format!("root:{}", pass).as_str()])
         .stdout(Stdio::piped())
         .spawn()
         .unwrap();
     if let Some(echo_output) = echo.stdout.take() {
-        Command::new("arch-chroot /mnt chpasswd")
+        Command::new("arch-chroot")
+            .arg("/mnt")
+            .arg("chpasswd")
             .stdin(echo_output)
             .spawn()
             .unwrap();
@@ -348,8 +350,9 @@ fn passwd_root(pass: String) {
     }
 }
 fn systemd(service: String) {
-    let systemctl = Command::new("systemctl enable")
-        .arg(service)
+    let systemctl = Command::new("arch-chroot")
+        .arg("/mnt")
+        .args(["systemctl", "enable", service.as_str()])
         .status()
         .unwrap();
     if !systemctl.success() {
@@ -382,7 +385,11 @@ fn locale(locale_config: String) {
             }
         });
         locale_gen.write_all(format!("{} UTF-8", locale_config).as_ref()).unwrap();
-        let locale_gen = Command::new("arch-chroot /mnt locale-gen").status().unwrap();
+        let locale_gen = Command::new("arch-chroot")
+            .arg("/mnt")
+            .args(["locale-gen"])
+            .status()
+            .unwrap();
         if !locale_gen.success() {
             exit(0);
         }
@@ -406,8 +413,11 @@ fn locale(locale_config: String) {
                 panic!("Error open file {:?}", error);
             }
         });
-        locale_gen.write_all(format!("en_US.UTF-8 UTF-8\n{} UTF-8", locale_config).as_ref()).unwrap();
-        let locale_gen = Command::new("arch-chroot /mnt locale-gen").status().unwrap();
+        let locale_gen = Command::new("arch-chroot")
+            .arg("/mnt")
+            .args(["locale-gen"])
+            .status()
+            .unwrap();
         if !locale_gen.success() {
             exit(0);
         }
