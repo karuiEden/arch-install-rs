@@ -404,15 +404,6 @@ fn locale(locale_config: String) {
         });
         locale_conf.write_all(format!("LANG={}\nLC_TIME={}\nLC_COLLATE=C", locale_config, locale_config).as_ref()).unwrap();
         } else {
-        let mut locale_gen = File::open("/mnt/etc/locale.gen").unwrap_or_else(|error|{
-            if error.kind() == ErrorKind::NotFound {
-                File::create("/mnt/etc/locale.gen").unwrap_or_else(|error|{
-                    panic!("Error create file {:?}", error);
-                })
-            } else {
-                panic!("Error open file {:?}", error);
-            }
-        });
         let locale_gen = Command::new("arch-chroot")
             .arg("/mnt")
             .args(["locale-gen"])
