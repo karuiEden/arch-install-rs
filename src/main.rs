@@ -384,7 +384,7 @@ fn locale(locale_config: String) {
                 panic!("Error open file {:?}", error);
             }
         });
-        locale_gen.write_all(format!("{} UTF-8", locale_config).as_ref()).unwrap();
+        locale_gen.write_all(format!("{} UTF-8", locale_config).as_bytes()).unwrap();
         let locale_gen = Command::new("arch-chroot")
             .arg("/mnt")
             .args(["locale-gen"])
