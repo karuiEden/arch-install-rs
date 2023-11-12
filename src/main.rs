@@ -1,10 +1,7 @@
-use std::fmt::format;
 use std::io;
 use std::fs::File;
 use std::io::{ErrorKind, Write};
 use std::process::{Command, exit, Stdio};
-use std::thread::spawn;
-
 struct SystemConfig {
     kernel: String,
     password_root: String,
@@ -254,14 +251,24 @@ fn main() {
 
 fn install(sc: SystemConfig) {
     let pacstrap = Command::new("pacstrap")
-        .args(["-K", "/mnt", "base", "base-devel", "linux-firmware", sc.choose_de.trim_end(), "networkmanager", "xorg",
-        "pipewire", "firefox", "unzip unrar", "grub", "intel-microcode amd-microcode"])
+        .args(["-K", "/mnt", "base", "base-devel", "linux-firmware"])
         .arg(sc.kernel.trim_end())
         .status()
         .unwrap();
     if !pacstrap.success() {
         exit(0);
     }
+
+    let pacman = Command::new("pacman")
+        .args(["-Sy", sc.choose_de.trim_end(), "networkmanager", "xorg",
+            "pipewire", "firefox", "unzip", "unrar", "grub", "intel-microcode", "amd-microcode", "xdg-utils", "xdg-user-dirs",
+            "--noconfirm"])
+        .status()
+        .unwrap();
+    if !pacman.success() {
+        exit(0);
+    }
+
     let genfstab = Command::new("/bin/bash")
         .args(["-c", "genfstab -U /mnt >> /mnt/etc/fstab"])
         .status()
@@ -334,7 +341,7 @@ fn passwd_root(pass: String) {
         .spawn()
         .unwrap();
     if let Some(echo_output) = echo.stdout.take() {
-        let chpasswd = Command::new("arch-chroot /mnt chpasswd")
+        Command::new("arch-chroot /mnt chpasswd")
             .stdin(echo_output)
             .spawn()
             .unwrap();
