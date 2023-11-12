@@ -266,15 +266,6 @@ fn install(sc: SystemConfig) {
     if !genfstab.success() {
         exit(0);
     }
-    let pacman = Command::new("arch-chroot /mnt pacman")
-        .args(["-Sy", sc.choose_de.trim_end(), "networkmanager", "xorg",
-            "pipewire", "firefox", "unzip", "unrar", "grub", "intel-ucode", "amd-ucode", "xdg-utils", "xdg-user-dirs",
-            "--noconfirm"])
-        .status()
-        .unwrap();
-    if !pacman.success() {
-        exit(0);
-    }
     let hwclock = Command::new("arch-chroot /mnt")
         .arg("hwclock --systohc")
         .status()
@@ -294,6 +285,15 @@ fn install(sc: SystemConfig) {
     hosts(&sc.hostname);
     passwd_root(sc.password_root);
     create_user(sc.user);
+    let pacman = Command::new("arch-chroot /mnt pacman")
+        .args(["-Sy", sc.choose_de.trim_end(), "networkmanager", "xorg",
+            "pipewire", "firefox", "unzip", "unrar", "grub", "intel-ucode", "amd-ucode", "xdg-utils", "xdg-user-dirs",
+            "--noconfirm"])
+        .status()
+        .unwrap();
+    if !pacman.success() {
+        exit(0);
+    }
     let nm = String::from("NetworkManager");
     systemd(nm);
     systemd(sc.login_manager);
