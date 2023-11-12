@@ -1,18 +1,25 @@
+use std::fmt::format;
 use std::io;
 use std::fs::File;
 use std::io::{ErrorKind, Write};
-use std::process::{Command, exit};
+use std::process::{Command, exit, Stdio};
+use std::thread::spawn;
+
 struct SystemConfig {
     kernel: String,
     password_root: String,
-    username: String,
+    user: UserConfig,
     choose_de: String,
-    user_admin: bool,
-    password: String,
     hostname: String,
     locale: String,
+    login_manager: String,
 }
-
+struct UserConfig {
+    username: String,
+    password: String,
+    shell: String,
+    user_admin: bool,
+}
 fn input() -> String {
     let mut answer = String::new();
     io::stdin().read_line(&mut answer).expect("Failed");
@@ -56,12 +63,16 @@ fn main() {
     let mut system_config = SystemConfig {
         kernel: String::new(),
         password_root: String::new(),
-        username: String::new(),
+        user: UserConfig {
+            username :String::new(),
+            user_admin: false,
+            shell: String::new(),
+            password: String::new(),
+        },
         choose_de: String::new(),
-        password: String::new(),
-        user_admin: false,
         hostname: String::new(),
         locale: String::new(),
+        login_manager: String::new(),
     };
     println!("Arch Installer by karui");
     println!("Do you mount all partitions?");
@@ -140,23 +151,23 @@ fn main() {
     println!("Enter root password:");
     system_config.password_root = passwd();
     println!("Enter username:");
-    system_config.username = input();
+    system_config.user.username = input();
     println!("Enter username password:");
-    system_config.password = passwd();
+    system_config.user.password = passwd();
     println!(
         "Add user {} to the \"wheel\" group?",
-        system_config.username
+        system_config.user.username
     );
     println!("Enter [Y/N] to add");
     loop {
         answer = input();
         match answer.trim_end() {
             "Y" | "y" => {
-                system_config.user_admin = true;
+                system_config.user.user_admin = true;
                 break;
             }
             "N" | "n" => {
-                system_config.user_admin = false;
+                system_config.user.user_admin = false;
                 break;
             }
             _ => {
@@ -164,6 +175,27 @@ fn main() {
                 continue;
             }
         };
+    }
+    println!("Choose shell:");
+    println!("1. bash");
+    println!("2. zsh");
+    println!("3. fish");
+    loop {
+        answer = input();
+        match answer.trim_end() {
+            "1" => {
+                system_config.user.shell = String::from("bash");
+                break;
+            },
+            "2" => {
+                system_config.user.shell = String::from("zsh");
+                break;
+            },
+            "3" => {
+                system_config.user.shell = String::from("fish")
+            },
+            _ => continue,
+        }
     }
     println!("Choose Desktop environment:");
     for i in 1..9 {
@@ -174,34 +206,42 @@ fn main() {
         match answer.trim_end() {
             "1" => {
                 system_config.choose_de = String::from("gnome");
+                system_config.login_manager = String::from("gdm");
                 break;
             }
             "2" => {
                 system_config.choose_de = String::from("plasma");
+                system_config.login_manager = String::from("sddm");
                 break;
             }
             "3" => {
                 system_config.choose_de = String::from("xfce4");
+                system_config.login_manager = String::from("lightdm");
                 break;
             }
             "4" => {
                 system_config.choose_de = String::from("cinnamon");
+                system_config.login_manager = String::from("lightdm");
                 break;
             }
             "5" => {
                 system_config.choose_de = String::from("mate");
+                system_config.login_manager = String::from("lightdm");
                 break;
             }
             "6" => {
                 system_config.choose_de = String::from("i3");
+                system_config.login_manager = String::from("lightdm");
                 break;
             }
             "7" => {
                 system_config.choose_de = String::from("dwm");
+                system_config.login_manager = String::from("lightdm");
                 break;
             }
             "8" => {
                 system_config.choose_de = String::from("sway");
+                system_config.login_manager = String::from("lightdm");
             }
             _ => {
                 answer.clear();
@@ -214,7 +254,8 @@ fn main() {
 
 fn install(sc: SystemConfig) {
     let pacstrap = Command::new("pacstrap")
-        .args(["-K", "/mnt", "base", "base-devel", "linux-firmware"])
+        .args(["-K", "/mnt", "base", "base-devel", "linux-firmware", sc.choose_de.trim_end(), "networkmanager", "xorg",
+        "pipewire", "firefox", "unzip unrar", "grub", "intel-microcode amd-microcode"])
         .arg(sc.kernel.trim_end())
         .status()
         .unwrap();
@@ -244,9 +285,70 @@ fn install(sc: SystemConfig) {
     }
     hostname(&sc.hostname);
     locale(sc.locale);
-    hosts(&sc.hostname)
+    hosts(&sc.hostname);
+    passwd_root(sc.password_root);
+    create_user(sc.user);
+    let nm = String::from("NetworkManager");
+    systemd(nm);
+    systemd(sc.login_manager);
+    boot_loader();
+    println!("Installation complete");
+}
 
+fn boot_loader() {
+    let install = Command::new("arch-chroot /mnt grub-install")
+        .status()
+        .unwrap();
+    if !install.success() {
+        exit(0);
+    }
+    let config = Command::new("arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg")
+        .status()
+        .unwrap();
+    if !config.success() {
+        exit(0)
+    }
+}
+enum Result<T,E> {
+    Ok(T),
+    Err(E),
+}
 
+fn create_user(user: UserConfig) {
+    let mut groups = String::from("-g users");
+    if user.user_admin == true {
+        groups.push_str("-G wheel");
+    }
+    let create = Command::new("useradd")
+        .args(["-m", groups.trim_end(), "-s", format!("/bin/{}", user.shell).as_str().trim_end(), "-p", user.password.trim_end(), user.username.trim_end()])
+        .status()
+        .unwrap();
+    if !create.success() {
+        exit(0);
+    }
+}
+fn passwd_root(pass: String) {
+    let mut echo = Command::new("arch-chroot /mnt echo")
+        .arg(format!("root:{}", pass))
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    if let Some(echo_output) = echo.stdout.take() {
+        let chpasswd = Command::new("arch-chroot /mnt chpasswd")
+            .stdin(echo_output)
+            .spawn()
+            .unwrap();
+        echo.wait().unwrap();
+    }
+}
+fn systemd(service: String) {
+    let systemctl = Command::new("systemctl enable")
+        .arg(service)
+        .status()
+        .unwrap();
+    if !systemctl.success() {
+        exit(0);
+    }
 }
 fn hostname(host_name: &String) {
     let mut host = File::open("/mnt/etc/hostname").unwrap_or_else(|error|{
