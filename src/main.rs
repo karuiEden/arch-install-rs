@@ -1,3 +1,4 @@
+use std::fmt::format;
 use std::io;
 use std::fs::{File, OpenOptions};
 use std::io::{ErrorKind, Write};
@@ -325,7 +326,7 @@ fn create_user(user: UserConfig) {
     }
     let create = Command::new("arch-chroot")
         .arg("/mnt")
-        .args(["useradd", "-m", groups.trim_end(), "-s", format!("/bin/{}", user.shell).as_str().trim_end(), "-p", user.password.trim_end(), user.username.trim_end()])
+        .arg(format!("useradd -m {} -s /bin/{} -p {} {}", groups, user.shell, user.password.trim_end(), user.username.trim_end()))
         .status()
         .unwrap();
     if !create.success() {
@@ -333,9 +334,9 @@ fn create_user(user: UserConfig) {
     }
 }
 fn passwd_root(pass: String) {
-    let mut echo = Command::new("arch-chroot")
-        .arg("/mnt")
-        .args(["echo", format!("root:{}", pass).as_str()])
+    let pass = format!("root:{}", pass);
+    let mut echo = Command::new("echo")
+        .arg(pass.as_str())
         .stdout(Stdio::piped())
         .spawn()
         .unwrap();
