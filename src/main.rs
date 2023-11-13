@@ -1,5 +1,5 @@
 use std::io;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::{ErrorKind, Write};
 use std::process::{Command, exit, Stdio};
 struct SystemConfig {
@@ -360,31 +360,28 @@ fn systemd(service: String) {
     }
 }
 fn hostname(host_name: &String) {
-    let mut host = File::open("/mnt/etc/hostname").unwrap_or_else(|error|{
-        if error.kind() == ErrorKind::NotFound {
-            File::create("/mnt/etc/hostname").unwrap_or_else(|error|{
-                panic!("Error create file {:?}", error);
-            })
-        } else {
-            panic!("Error open file {:?}", error);
-        }
-    });
-    host.write_all(host_name.as_ref()).unwrap();
+    let mut host = File::options()
+        .read(true)
+        .write(true)
+        .append(true)
+        .create(true)
+        .open("/mnt/etc/hostname")
+        .unwrap();
+    host.write_all(host_name.as_bytes()).unwrap();
 }
 
 
 fn locale(locale_config: String) {
     if locale_config == "en_US.UTF-8" {
-        let mut locale_gen = File::open("/mnt/etc/locale.gen").unwrap_or_else(|error|{
-            if error.kind() == ErrorKind::NotFound {
-                File::create("/mnt/etc/locale.gen").unwrap_or_else(|error|{
-                    panic!("Error create file {:?}", error);
-                })
-            } else {
-                panic!("Error open file {:?}", error);
-            }
-        });
-        locale_gen.write_all(format!("{} UTF-8", locale_config).as_bytes()).unwrap();
+        let mut locale_gen = File::options()
+            .read(true)
+            .write(true)
+            .append(true)
+            .create(true)
+            .open("/mnt/etc/locale.gen")
+            .unwrap();
+
+        writeln!(&mut locale_gen, "{}", format!("{} UTF-8", locale_config).as_str()).unwrap();
         let locale_gen = Command::new("arch-chroot")
             .arg("/mnt")
             .args(["locale-gen"])
@@ -393,17 +390,23 @@ fn locale(locale_config: String) {
         if !locale_gen.success() {
             exit(0);
         }
-        let mut locale_conf = File::open("/mnt/etc/locale.conf").unwrap_or_else(|error|{
-            if error.kind() == ErrorKind::NotFound {
-                File::create("/mnt/etc/locale.conf").unwrap_or_else(|error|{
-                    panic!("Error create file {:?}", error);
-                })
-            } else {
-                panic!("Error open file {:?}", error);
-            }
-        });
-        locale_conf.write_all(format!("LANG={}\nLC_TIME={}\nLC_COLLATE=C", locale_config, locale_config).as_ref()).unwrap();
+        let mut locale_conf = File::options()
+            .read(true)
+            .write(true)
+            .append(true)
+            .create(true)
+            .open("/mnt/etc/locale.conf")
+            .unwrap();
+        locale_conf.write_all(format!("LANG={}\nLC_TIME={}\nLC_COLLATE=C", locale_config, locale_config).as_bytes()).unwrap();
         } else {
+        let mut locale_gen = File::options()
+            .read(true)
+            .write(true)
+            .append(true)
+            .create(true)
+            .open("/mnt/etc/locale.gen")
+            .unwrap();
+        writeln!(&mut locale_gen, "{}", format!("en_US.UTF-8 UTF-8\n{} UTF-8", locale_config).as_str()).unwrap();
         let locale_gen = Command::new("arch-chroot")
             .arg("/mnt")
             .args(["locale-gen"])
@@ -412,28 +415,24 @@ fn locale(locale_config: String) {
         if !locale_gen.success() {
             exit(0);
         }
-        let mut locale_conf = File::open("/mnt/etc/locale.conf").unwrap_or_else(|error|{
-            if error.kind() == ErrorKind::NotFound {
-                File::create("/mnt/etc/locale.conf").unwrap_or_else(|error|{
-                    panic!("Error create file {:?}", error);
-                })
-            } else {
-                panic!("Error open file {:?}", error);
-            }
-        });
+        let mut locale_conf = File::options()
+            .read(true)
+            .write(true)
+            .append(true)
+            .create(true)
+            .open("/mnt/etc/locale.conf")
+            .unwrap();
         locale_conf.write_all(format!("LANG={}\nLC_TIME={}\nLC_COLLATE=C", locale_config, locale_config).as_ref()).unwrap();
     }
 }
 
 fn hosts(hostname: &String) {
-    let mut host = File::open("/mnt/etc/hosts").unwrap_or_else(|error|{
-        if error.kind() == ErrorKind::NotFound {
-            File::create("/mnt/etc/hosts").unwrap_or_else(|error|{
-                panic!("Error create file {:?}", error);
-            })
-        } else {
-            panic!("Error open file {:?}", error);
-        }
-    });
+    let mut host = File::options()
+        .read(true)
+        .write(true)
+        .append(true)
+        .create(true)
+        .open("/mnt/etc/hosts")
+        .unwrap();
     host.write_all(format!("127.0.0.1        localhost\n::1              localhost\n127.0.1.1        {}", hostname).as_ref()).unwrap();
 }
