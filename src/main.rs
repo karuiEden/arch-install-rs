@@ -1,7 +1,6 @@
-use std::fmt::format;
 use std::io;
-use std::fs::{File, OpenOptions};
-use std::io::{ErrorKind, Write};
+use std::fs::File;
+use std::io::Write;
 use std::process::{Command, exit, Stdio};
 struct SystemConfig {
     kernel: String,
@@ -314,19 +313,11 @@ fn boot_loader() {
         exit(0)
     }
 }
-enum Result<T,E> {
-    Ok(T),
-    Err(E),
-}
 
 fn create_user(user: UserConfig) {
-    let mut groups = String::from("-g users");
-    if user.user_admin == true {
-        groups.push_str("-G wheel");
-    }
     let create = Command::new("arch-chroot")
         .arg("/mnt")
-        .arg(format!("useradd -m {} -s /bin/{} -p {} {}", groups, user.shell, user.password.trim_end(), user.username.trim_end()))
+        .arg(format!("useradd -m -g users -G wheel -s /bin/{} -p {} {}", user.shell, user.password.trim_end(), user.username.trim_end()))
         .status()
         .unwrap();
     if !create.success() {
@@ -423,7 +414,7 @@ fn locale(locale_config: String) {
             .create(true)
             .open("/mnt/etc/locale.conf")
             .unwrap();
-        locale_conf.write_all(format!("LANG={}\nLC_TIME={}\nLC_COLLATE=C", locale_config, locale_config).as_ref()).unwrap();
+        locale_conf.write_all(format!("LANG={}\nLC_TIME={}\nLC_COLLATE=C", locale_config, locale_config).as_bytes()).unwrap();
     }
 }
 
@@ -435,5 +426,5 @@ fn hosts(hostname: &String) {
         .create(true)
         .open("/mnt/etc/hosts")
         .unwrap();
-    host.write_all(format!("127.0.0.1        localhost\n::1              localhost\n127.0.1.1        {}", hostname).as_ref()).unwrap();
+    host.write_all(format!("127.0.0.1        localhost\n::1              localhost\n127.0.1.1        {}", hostname).as_bytes()).unwrap();
 }
