@@ -252,7 +252,7 @@ fn main() {
 fn install(sc: SystemConfig) {
     let pacstrap = Command::new("pacstrap")
         .args(["-K", "/mnt", "base", "base-devel", "linux-firmware", sc.choose_de.as_str(), "networkmanager", "xorg",
-            "pipewire", "firefox", "unzip", "unrar", "grub", "intel-ucode", "amd-ucode", "xdg-utils", "xdg-user-dirs"])
+            "pipewire", "firefox", "unzip", "unrar", "grub", "intel-ucode", "amd-ucode", "xdg-utils", "xdg-user-dirs", sc.user.shell.as_str()])
         .arg(sc.kernel.trim_end())
         .status()
         .unwrap();
@@ -317,7 +317,7 @@ fn boot_loader() {
 fn create_user(user: UserConfig) {
     let create = Command::new("arch-chroot")
         .arg("/mnt")
-        .arg(format!("useradd -m -g users -G wheel -s /bin/{} -p {} {}", user.shell, user.password.trim_end(), user.username.trim_end()))
+        .args(["useradd","-m", "-g users -G wheel", format!("-s /bin/{}", user.shell), format!("-p {}", user.password.trim_end()), user.username.trim_end()])
         .status()
         .unwrap();
     if !create.success() {
@@ -426,5 +426,5 @@ fn hosts(hostname: &String) {
         .create(true)
         .open("/mnt/etc/hosts")
         .unwrap();
-    host.write_all(format!("127.0.0.1        localhost\n::1              localhost\n127.0.1.1        {}", hostname).as_bytes()).unwrap();
+    host.write_all(format!("127.0.0.1        localhost\n::1              localhost\n127.0.1.1        {}", hostname.trim_end()).as_bytes()).unwrap();
 }
