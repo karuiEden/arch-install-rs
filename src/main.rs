@@ -317,7 +317,8 @@ fn boot_loader() {
 fn create_user(user: UserConfig) {
     let create = Command::new("arch-chroot")
         .arg("/mnt")
-        .args(["useradd","-m", "-g users -G wheel", format!("-s /bin/{}", user.shell), format!("-p {}", user.password.trim_end()), user.username.trim_end()])
+        .arg("useradd")
+        .args(["-m", "-g users -G wheel", format!("-s /bin/{}", user.shell).as_str(), format!("-p {}", user.password.trim_end()).as_str(), user.username.trim_end()])
         .status()
         .unwrap();
     if !create.success() {
