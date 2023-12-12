@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RemoteTargetsManager">
+    <option name="projectDefaultTargetUuid" value="8a2ca2f9-983a-4215-8379-a514d9f8095f" />
+    <targets>
+      <target name="WSL - Arch" type="wsl" uuid="8a2ca2f9-983a-4215-8379-a514d9f8095f">
+        <config>
+          <option name="distributionMsId" value="Arch" />
+          <option name="projectRootOnTarget" value="{exitCode=0, timeout=false, cancelled=false, stdout=/mnt/c/Program Files/JetBrains/RustRover 233.8264.22/jbr/bin&#10;, stderr=}/arch-install" />
+        </config>
+        <ContributedStateBase type="RsLanguageRuntime">
+          <config>
+            <option name="cargoPath" value="cargo" />
+            <option name="cargoVersion" value="1.73.0" />
+            <option name="rustcPath" value="rustc" />
+            <option name="rustcVersion" value="1.73.0 (cc66ad468 2023-10-03) (Arch Linux rust 1:1.73.0-1)" />
+          </config>
+        </ContributedStateBase>
+      </target>
+    </targets>
+  </component>
+</project>
