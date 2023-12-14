@@ -252,7 +252,7 @@ fn main() {
 fn install(sc: SystemConfig) {
     let pacstrap = Command::new("pacstrap")
         .args(["-K", "/mnt", "base", "base-devel", "linux-firmware", sc.choose_de.as_str(), "networkmanager", "xorg",
-            "pipewire", "firefox", "unzip", "unrar", "grub", "intel-ucode", "amd-ucode", "xdg-utils", "xdg-user-dirs", sc.user.shell.as_str()])
+            "pipewire", "firefox", "unzip", "unrar", "grub", "intel-ucode", "amd-ucode", "efibootmgr", "xdg-utils", "xdg-user-dirs", sc.user.shell.as_str()])
         .arg(sc.kernel.trim_end())
         .status()
         .unwrap();
@@ -318,7 +318,7 @@ fn create_user(user: UserConfig) {
     let create = Command::new("arch-chroot")
         .arg("/mnt")
         .arg("useradd")
-        .args(["-m", "-g users", "-G wheel", format!("-s /bin/{}", user.shell).as_str(), format!("-p {}", user.password.trim_end()).as_str(), user.username.trim_end()])
+        .args(["-m", "-u 1000", "U", "-G wheel", format!("-s /bin/{}", user.shell).as_str(), format!("-p {}", user.password.trim_end()).as_str(), user.username.trim_end()])
         .status()
         .unwrap();
     if !create.success() {
