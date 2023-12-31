@@ -318,7 +318,7 @@ fn create_user(user: UserConfig) {
     let create = Command::new("arch-chroot")
         .arg("/mnt")
         .arg("useradd")
-        .args(["-m", "-g users", "-G wheel", format!("-s /bin/{}", user.shell).as_str(), format!("-p {}", user.password.trim_end()).as_str(), user.username.trim_end()])
+        .args(["-m", "-u 1000", "-G wheel", format!("-s /bin/{}", user.shell).as_str(), format!("-p {}", user.password.trim_end()).as_str(), user.username.trim_end()])
         .status()
         .unwrap();
     if !create.success() {
@@ -427,5 +427,5 @@ fn hosts(hostname: &String) {
         .create(true)
         .open("/mnt/etc/hosts")
         .unwrap();
-    host.write_all(format!("127.0.0.1        localhost\n::1              localhost\n127.0.1.1        {}", hostname.trim_end()).as_bytes()).unwrap();
+    host.write_all(format!("127.0.0.1        localhost\n::1              localhost\n127.0.1.1        {}", hostname).as_bytes()).unwrap();
 }
